@@ -100,18 +100,13 @@ class Parser
         }
 
         if (empty($data)) {
-            $tempFileIn = tempnam('/tmp', 'pdf');
-            file_put_contents($tempFileIn, $content);
-            $tempFileOut = tempnam('/tmp', 'pdf');
-            shell_exec('gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/printer -dNOPAUSE -dQUIET -dBATCH -sOutputFile=' . $tempFileOut . ' ' . $tempFileIn);
-            $newContent = file_get_contents($tempFileOut);
-            @unlink($tempFileOut);
+            $revertedContent = $this->changeVersion($content, '1.4');
 
-            if (!strlen($newContent)) {
+            if (!strlen($revertedContent)) {
                 throw new \Exception('Object list not found. Reverting version also failed.');
             }
 
-            return $this->parseContent($newContent);
+            return $this->parseContent($revertedContent);
         }
 
         // Create destination object.
@@ -128,6 +123,19 @@ class Parser
 
         return $document;
     }
+
+    public function changeVersion($content, $newVersion)
+	{
+		$tempFileIn = tempnam('/tmp', 'pdf');
+		file_put_contents($tempFileIn, $content);
+		$tempFileOut = tempnam('/tmp', 'pdf');
+		shell_exec('gs -sDEVICE=pdfwrite -dCompatibilityLevel=' . $newVersion . ' -dPDFSETTINGS=/printer -dNOPAUSE -dQUIET -dBATCH -sOutputFile=' . $tempFileOut . ' ' . $tempFileIn);
+		$newContent = file_get_contents($tempFileOut);
+		@unlink($tempFileIn);
+		@unlink($tempFileOut);
+
+		return $newContent;
+	}
 
     protected function parseTrailer($structure, $document)
     {
